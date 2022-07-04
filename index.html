@@ -5,12 +5,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Wahl Visualisiertung</title>
+  <title>Election Visualisation</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 
 <body>
-  <h1>test</h1>
+  <div class="body-container">
+    <div class="title-section flex-section flex-section-left">
+      <h1>Wikipedia Editierungen zur Bundestagswahl 2021</h1>
+      <hr>
+      <p>Wie stark wurden vor der Bundestagswahl 2021 die Wikipedia-Einträge der Politiker*innen überarbeitet?</p>
+    </div>
+    <div class="description-section flex-section flex-section-right">
+      <p>Diese Grafik veranschaulicht die Editierung auf den Wikipedia-Seiten von den Parteien mit Bundestagsfraktionen.
+        Hier zu sehen sind die Listenführer*innen der Landeslisten in den 16 Bundesländern. Editieren bedeutet bei
+        Wikipedia Inhalte löschen, hinzufügen oder verändern. Wir errechneten für alle Politiker*innen die jeweils
+        durchschnittliche Editanzahl in den drei Jahren nach der letzten Bundestagswahl 2017 bis zum September 2020.</p>
+      <p>Anschließend verglichen wir den individuellen Durchschnitt der Wikipedia Editierungen von den einzelnen
+        Politiker*innen mit der Anzahl der Editierungen im Jahr vor der Bundestagswahl im September 2021.</p>
+      <p>Daraus erstellten wir eine Heatmap die zeigt, wie stark die Zahl an WikipediaEditierungen in den Monaten vor
+        der
+        Bundestagswahl anstieg.</p>
+    </div>
+    <div class="selection-section flex-section flex-section-left">
+    </div>
+    <div class="visualisation-section flex-section flex-section-right">
+      <div id="election-heatmap"></div>
+    </div>
+  </div>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="script.js"></script>
 </body>

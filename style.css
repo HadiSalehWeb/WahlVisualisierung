@@ -1,0 +1,73 @@
+body {
+    margin: 0
+}
+
+h1 {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+p {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.body-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    align-items: flex-start;
+    align-content: space-between;
+    background-color: #F5F5F5;
+}
+
+.flex-section {
+    margin: 20px;
+}
+
+.flex-section-left {
+    flex-basis: 430px;
+}
+
+.flex-section-right {
+    flex-basis: 59%;
+}
+
+.party {
+    background-color: white;
+    border-radius: 10px;
+    margin-bottom: 13px;
+    padding: 15px;
+    display: inline-block;
+}
+
+.party-header {
+    position: relative;
+}
+
+.party-candidates {
+    display: none;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-row-gap: 14px;
+    margin-top: 10px;
+}
+
+.party-candidates img {
+    border-radius: 50%;
+}
+
+.party-header img:nth-child(3) {
+    display: none;
+    position: relative;
+    bottom: 50%;
+    transform: translateY(-50%);
+    margin-left: 10px;
+    border-radius: 50%;
+}
+
+.party.show .party-header img:nth-child(3) {
+    display: inline;
+}
+
+.party.show .party-candidates {
+    display: grid;
+}
