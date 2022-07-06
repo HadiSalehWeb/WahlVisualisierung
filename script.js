@@ -369,7 +369,7 @@ const createVisualisation = function (min, max, groups, vars, data, additionalIn
     legendsvg
         .append("rect")
         .attr("class", "legendRect")
-        .attr("x", -legendWidth / 2 + 0.5)
+        .attr("x", -legendWidth / 2 - 20)
         .attr("y", 10)
         .attr("width", legendWidth)
         .attr("height", legendHeight)
@@ -405,7 +405,7 @@ const createVisualisation = function (min, max, groups, vars, data, additionalIn
         .attr("id", "legendAxis")
         .attr(
             "transform",
-            "translate(" + -legendWidth / 2 + "," + (10 + legendHeight) + ")"
+            "translate(" + (-20 - legendWidth / 2) + "," + (10 + legendHeight) + ")"
         );
 
     heatmap
