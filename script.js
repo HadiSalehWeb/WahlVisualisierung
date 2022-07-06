@@ -223,6 +223,8 @@ ${candidate.state}</div>`
         ret.push(partyElement)
     }
 
+
+
     return ret
 }
 
@@ -230,11 +232,11 @@ const roundToThreeDigits = function (num) {
     return Math.round(num * 1000) / 1000
 }
 
-const createVisualisation = function (min, max, groups, vars, data, additionalInfo) {
+const createVisualisation = function (min, max, groups, vars, data, additionalInfo, totals) {
     const heatmap = d3.select("#election-heatmap");
     heatmap.node().innerHTML = ''
 
-    const margin = { top: 100, right: 30, bottom: 30, left: 160 },
+    const margin = { top: 100, right: 70, bottom: 30, left: 160 },
         width = Math.floor(heatmap.node().parentElement.getBoundingClientRect().width) - margin.left - margin.right,
         height = vars.length * (width / groups.length);
 
@@ -264,6 +266,17 @@ const createVisualisation = function (min, max, groups, vars, data, additionalIn
 
     visualisation.append("g")
         .call(d3.axisLeft(y));
+
+    if (stateManager.getShowTotals()) {
+        const y2 = d3.scaleBand()
+            .range([height, 0])
+            .domain(totals.map(total => `Platz #${totals.length - totals.slice(0).sort().indexOf(total)}`))
+            .padding(0.01);
+
+        visualisation.append("g")
+            .attr("transform", `translate(${width}, 0)`)
+            .call(d3.axisRight(y2));
+    }
 
     // Build color scale
     const myColor = d3.scaleLinear()
@@ -421,7 +434,7 @@ const createVisualisation = function (min, max, groups, vars, data, additionalIn
         .on("resize", function () {
             clearTimeout(rerenderTimeout);
             rerenderTimeout = setTimeout(() => {
-                createVisualisation(min, max, groups, vars, data, additionalInfo)
+                createVisualisation(min, max, groups, vars, data, additionalInfo, totals)
             }, 300);
         });
 }
@@ -437,6 +450,7 @@ const stateManager = (function () {
     }
     let selectedParty = null;
     const selectedCandidates = []
+    let showTotals = false
 
     const selectParty = function (party) {
         if (selectedParty === party) return;
@@ -474,16 +488,38 @@ const stateManager = (function () {
         TemporaryName.createVisualisationWithVars(selectedCandidates.slice(0).reverse())
     }
 
+    const setAllCandidates = function (vars) {
+        selectedCandidates.splice(0, selectedCandidates.length)
+        selectedCandidates.push(...vars)
+        vars.forEach(variable => {
+            const element = document.querySelector(`[data-candidate="${variable}"]`);
+            element.classList.add('selected');
+            element.style.boxShadow = '0px 0px 2px 4px ' + (element.classList.contains('all-candidates-image') ?
+                'black' :
+                partyColors[element.parentElement.parentElement.parentElement.parentElement.id.slice(6)]
+            )
+        })
+        TemporaryName.createVisualisationWithVars(selectedCandidates.slice(0).reverse())
+    }
+
     const deselectAll = function () {
         document.querySelectorAll('img.selected').forEach(img => { img.classList.remove('selected'); img.style.boxShadow = '' })
         selectedCandidates.splice(0, selectedCandidates.length)
         TemporaryName.createVisualisationWithVars(selectedCandidates.slice(0).reverse())
     }
 
+    const checkShowTotals = function (checked) {
+        showTotals = checked
+        TemporaryName.createVisualisationWithVars(selectedCandidates.slice(0).reverse())
+    }
+
     return {
         selectParty,
         selectCandidate,
-        deselectAll
+        deselectAll,
+        checkShowTotals,
+        setAllCandidates,
+        getShowTotals: () => showTotals
     }
 })()
 
@@ -506,7 +542,8 @@ const TemporaryName = (function () {
                     average: chosenCandidates.find(cand => cand.name === c).averageEdits,
                     editData: chosenCandidates.find(cand => cand.name === c).editData.reduce((a, c) => Object.assign(a, { [c.date.month + '/' + c.date.year]: { edits: c.edits, url: c.editsUrl } }), {})
                 }
-            }), {})
+            }), {}),
+            vars.map(variable => roundToThreeDigits(groups.reduce((a, group) => extractValue(chosenCandidates, group, variable), 0) / groups.length))
         )
     }
 
@@ -515,6 +552,7 @@ const TemporaryName = (function () {
 
         const selectionSection = document.querySelector('.selection-section')
         const partyElements = createPartyElements(data);
+        document.getElementById('show-totals').addEventListener('input', e => stateManager.checkShowTotals(e.target.checked))
         for (let partyElement of partyElements)
             selectionSection.appendChild(partyElement);
 
@@ -523,8 +561,12 @@ const TemporaryName = (function () {
         maxEdits = allEdits.reduce((a, c) => c > a ? c : a, Number.MIN_SAFE_INTEGER)
         chosenCandidates = data.flatMap(party => party.candidates)
         groups = getDateGroups(comparingDates.start, comparingDates.end)
-        const vars = data.map(party => party.candidates[0].name).reverse()
-        createVisualisationWithVars(vars)
+        const vars = data.map(party => party.candidates[0].name)
+        // array.forEach(element => {
+
+        // });
+        stateManager.setAllCandidates(vars)
+        // createVisualisationWithVars(vars)
         // createVisualisation(
         //     minEdits,
         //     maxEdits,
