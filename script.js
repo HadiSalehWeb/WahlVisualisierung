@@ -56,10 +56,18 @@ const restructureAndFilterJson = function (json) {
     }))
 }
 
+const pullEditDataPointByDate = function (editData, date) {
+    const search = editData.find(candidatePoint => candidatePoint.date.month === date.month && candidatePoint.date.year === date.year)
+    if (!search) return { edits: 0 }
+    return search
+}
+
 const processJson = function (json) {
+    const partyOrder = ['SPD', 'CDU/CSU', 'Grüne', 'FDP', 'AfD', 'Die Linke']
+
     return json.map(party => ({
         name: party.name,
-        candidates: party.candidates.map(candidate => {
+        candidates: [0].concat(party.candidates.map(candidate => {
             const averageEdits = candidate.averagingMonthCounts.length === 0 ? 0 : candidate.averagingMonthCounts.reduce((a, c) => a + c.Edits, 0) / candidate.averagingMonthCounts.length
             const averageIpEdits = candidate.averagingMonthCounts.length === 0 ? 0 : candidate.averagingMonthCounts.reduce((a, c) => a + c.IPs, 0) / candidate.averagingMonthCounts.length
             const averageMinorEdits = candidate.averagingMonthCounts.length === 0 ? 0 : candidate.averagingMonthCounts.reduce((a, c) => a + c.MinorEdits, 0) / candidate.averagingMonthCounts.length
@@ -85,8 +93,28 @@ const processJson = function (json) {
                     comparingMonthCounts: candidate.comparingMonthCounts
                 }
             }
+        })).map((value, index, array) => {
+            if (index !== 0) return value;
+            const actualArray = array.slice(1)
+            const averageEdits = actualArray.reduce((a, c) => a + c.averageEdits, 0) / actualArray.length
+            return {
+                name: party.name + " Durchschnitt",
+                isAllCandidates: true,
+                averageEdits,
+                editData: actualArray.reduce((a, c) => a.map(point => ({
+                    date: point.date,
+                    edits: point.edits + pullEditDataPointByDate(c.editData, point.date).edits
+                })), actualArray[0].editData.map(randomPoint => ({
+                    date: randomPoint.date,
+                    edits: 0
+                }))).map(point => ({
+                    date: point.date,
+                    edits: point.edits,
+                    editsFromAverage: point.edits - averageEdits,
+                }))
+            }
         })
-    }))
+    })).sort((p1, p2) => partyOrder.indexOf(p1.name) - partyOrder.indexOf(p2.name))
 }
 
 const extractValue = function (candidates, group, variable) {
@@ -112,70 +140,83 @@ const getDateGroups = function (start, end) {
     return ret;
 }
 
-const removeIllegalSymbols = function (name, replacement) {
-    return name.replace('/', replacement).replace(' ', replacement).toLowerCase()
+const removeIllegalSymbols = function (name, slashReplacement, spaceReplacement) {
+    return name.replaceAll('/', slashReplacement).replaceAll(' ', spaceReplacement)
 }
-//   <div class="party" id="party-spd">
-//     <div class="party-header">
-//       <span class="arrow"></span>
-//       <img src="https://via.placeholder.com/240x120">
-//       <img src="https://via.placeholder.com/60x60">
-//     </div>
-//     <div class="party-candidates">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//       <img src="https://via.placeholder.com/60x60">
-//     </div>
-//   </div>
+
+const convertNonLatinSymbols = function (name) {
+    return name.replaceAll('ü', 'ü').replaceAll('ä', 'ä').replaceAll('ö', 'ö').replaceAll('Ö', 'Ö').replaceAll('ğ', 'ğ').replaceAll('Ż', 'Ż').replaceAll('ć', 'ć')
+}
+
 const createPartyElements = function (data) {
     const ret = []
 
-    // allCandidatesImage.setAttribute('src', 'images/all candidates.png')
     for (let party of data) {
-        const partyName = removeIllegalSymbols(party.name)
+        const partyName = convertNonLatinSymbols(removeIllegalSymbols(party.name, '', '_'))
         const partyElement = document.createElement('div')
         const header = document.createElement('div')
-        const candidates = document.createElement('div')
+        const candidatesContainer = document.createElement('div')
         const arrow = document.createElement('span')
+        const candidates = document.createElement('div')
         const partyImage = document.createElement('img')
         const allCandidatesImage = document.createElement('img')
 
         partyElement.classList.add('party')
         partyElement.setAttribute('id', 'party-' + partyName)
         header.classList.add('party-header')
+        candidatesContainer.classList.add('party-candidates-container')
         candidates.classList.add("party-candidates")
         arrow.classList.add('arrow')
-        partyImage.setAttribute('src', 'images/parties/' + partyName + '/logo.png')
-        partyImage.setAttribute('src', 'https://via.placeholder.com/240x120')
+        partyImage.setAttribute('src', 'images/parties/' + partyName + '/Logo.png')
         partyImage.addEventListener('click', _ => stateManager.selectParty(partyName))
-        allCandidatesImage.setAttribute('src', 'https://via.placeholder.com/60x60')
+        partyImage.classList.add("party-image")
+        allCandidatesImage.setAttribute('src', 'images/parties/' + partyName + '/Gruppe.png')
+        allCandidatesImage.classList.add("all-candidates-image")
+        allCandidatesImage.addEventListener('click', e => stateManager.selectCandidate(e))
+        allCandidatesImage.setAttribute('data-candidate', party.name + " Durchschnitt")
 
+        candidatesContainer.appendChild(candidates)
 
         header.appendChild(arrow)
         header.appendChild(partyImage)
         header.appendChild(allCandidatesImage)
 
         partyElement.appendChild(header)
-        partyElement.appendChild(candidates)
+        partyElement.appendChild(candidatesContainer)
 
-        for (let candidate of party.candidates) {
-            const candidateElement = document.createElement('img')
-            // partyImage.setAttribute('src', 'images/parties/' + partyName + '/' + candidate.name + '.png')
-            candidateElement.setAttribute('src', 'https://via.placeholder.com/60x60')
 
+        for (let candidate of party.candidates.slice(1)) {
+            const candidateElement = document.createElement('div')
+            const candidateDescriptionBox = document.createElement('div')
+            const candidateDiv = document.createElement('div')
+            const candidateImage = document.createElement('img')
+            candidateElement.classList.add("candidate-image-container")
+            let startTimestamp = 0
+            let startTimestampAtStartOfLeaveEvent
+            candidateElement.addEventListener('mouseenter', e => {
+                startTimestamp = e.timeStamp
+                candidateElement.classList.add('hover')
+                candidateElement.classList.add('transition-finished')
+            })
+            candidateElement.addEventListener('mouseleave', e => {
+                startTimestampAtStartOfLeaveEvent = startTimestamp
+                candidateElement.classList.remove('hover')
+                setTimeout(() => {
+                    if (startTimestamp === startTimestampAtStartOfLeaveEvent)
+                        candidateElement.classList.remove('transition-finished')
+                }, Math.min(300, e.timeStamp - startTimestamp) + 50);
+            })
+            candidateDescriptionBox.classList.add("candidate-image-description-box")
+            candidateImage.setAttribute('src', 'images/parties/' + partyName + '/' + convertNonLatinSymbols(candidate.name) + '.png')
+            candidateImage.addEventListener('click', e => stateManager.selectCandidate(e))
+            candidateImage.setAttribute('data-candidate', candidate.name)
+
+            candidateDiv.innerHTML = `<span>${candidate.name}</span><br><div class='small-text'>Landeslistenführer:
+${candidate.state}</div>`
+
+            candidateElement.appendChild(candidateImage)
+            candidateElement.appendChild(candidateDescriptionBox)
+            candidateDescriptionBox.appendChild(candidateDiv)
             candidates.append(candidateElement)
         }
 
@@ -185,7 +226,11 @@ const createPartyElements = function (data) {
     return ret
 }
 
-const createVisualisation = function (min, max, groups, vars, data) {
+const roundToThreeDigits = function (num) {
+    return Math.round(num * 1000) / 1000
+}
+
+const createVisualisation = function (min, max, groups, vars, data, additionalInfo) {
     const heatmap = d3.select("#election-heatmap");
     heatmap.node().innerHTML = ''
 
@@ -225,67 +270,178 @@ const createVisualisation = function (min, max, groups, vars, data) {
         .range(["#a0651a", "#eef1ea", "#187a72"])
         .domain([min, 0, max])
 
+    const tooltip = d3.select("#election-heatmap")
+        .append("div")
+        .style("opacity", 0)
+        .attr("class", "tooltip")
+        .style("background-color", "white")
+        .style("position", "absolute")
+        .style("border", "solid")
+        .style("border-width", "2px")
+        .style("border-radius", "5px")
+        .style("padding", "5px")
+        .style("pointer-events", "none")
+
+    const mouseover = function () {
+        tooltip.style("opacity", 1)
+        d3.select(this)
+            .style("stroke", "black")
+    }
+    const mousemove = function (event, d) {
+        const shouldBeLeft = event.x < document.body.clientWidth * .7
+        tooltip
+            .html(`Kandidat Durchschnitt von 10.2017 bis 09.2020: <b>${roundToThreeDigits(additionalInfo[d.variable].average)}</b><br>Editierungen diesen Monat: <b>${roundToThreeDigits(additionalInfo[d.variable].editData[d.group].edits)}</b><br>Wert dieser Zelle (Differenz zwischen Editierungen und Durchschnitt): <b>${roundToThreeDigits(d.value)}</b>`)
+            .style(shouldBeLeft ? "left" : "right", (shouldBeLeft ? event.x + 10 : document.body.clientWidth - event.x + 10) + "px")
+            .style(shouldBeLeft ? "right" : "left", "unset")
+            .style("top", (event.layerY) + "px")
+    }
+    const mouseleave = function () {
+        tooltip.style("opacity", 0)
+        d3.select(this)
+            .style("stroke", "none")
+    }
+
+    const click = function (_, d) {
+        const url = additionalInfo[d.variable].editData[d.group].url;
+        if (url)
+            window.open(url.replaceAll('&amp;', '&'), '_blank')
+    }
+
     visualisation.selectAll()
         .data(data, function (d) { return d.group + ':' + d.variable; })
         .join("rect")
         .attr("x", function (d) { return x(d.group) })
         .attr("y", function (d) { return y(d.variable) })
-        .attr("width", x.bandwidth())
-        .attr("height", y.bandwidth())
+        .attr("rx", 4)
+        .attr("ry", 4)
+        .attr("width", x.bandwidth() - 2)
+        .attr("height", y.bandwidth() - 2)
         .style("fill", function (d) { return myColor(d.value) })
-
+        .style("stroke-width", 4)
+        .style("stroke", "none")
+        .on("mouseover", mouseover)
+        .on("mousemove", mousemove)
+        .on("mouseleave", mouseleave)
+        .on("click", click)
+        
     let rerenderTimeout = null;
 
     d3.select(window)
         .on("resize", function () {
             clearTimeout(rerenderTimeout);
             rerenderTimeout = setTimeout(() => {
-                createVisualisation(min, max, groups, vars, data)
+                createVisualisation(min, max, groups, vars, data, additionalInfo)
             }, 300);
         });
 }
 
 const stateManager = (function () {
+    const partyColors = {
+        'SPD': '#e3000f',
+        'CDUCSU': '#000000',
+        'Grüne': '#46962b',
+        'FDP': '#ffff00',
+        'AfD': '#009ee0',
+        'Die_Linke': '#be3075'
+    }
     let selectedParty = null;
+    const selectedCandidates = []
 
     const selectParty = function (party) {
         if (selectedParty === party) return;
 
-        if (selectedParty)
+        if (selectedParty) {
             document.querySelector('.party#party-' + selectedParty).classList.remove('show')
+            document.querySelector('.party#party-' + selectedParty).classList.remove('transition-finished')
+        }
 
+        setTimeout(() => {
             selectedParty = party;
-        document.querySelector('.party#party-' + selectedParty).classList.add('show')
+            document.querySelector('.party#party-' + selectedParty).classList.add('show')
+        }, 0);
+
+        setTimeout(() => {
+            document.querySelector('.party#party-' + selectedParty).classList.add('transition-finished')
+        }, 300);
+    }
+
+    const selectCandidate = function (e) {
+        e.target.classList.toggle("selected")
+
+        if (e.target.classList.contains('selected')) {
+            selectedCandidates.push(e.target.getAttribute('data-candidate'))
+            e.target.style.boxShadow = '0px 0px 2px 4px ' + (e.target.classList.contains('all-candidates-image') ?
+                'black' :
+                partyColors[e.target.parentElement.parentElement.parentElement.parentElement.id.slice(6)]
+            )
+        }
+        else {
+            selectedCandidates.splice(selectedCandidates.indexOf(e.target.getAttribute('data-candidate')), 1)
+            e.target.style.boxShadow = ''
+        }
+
+        TemporaryName.createVisualisationWithVars(selectedCandidates.slice(0).reverse())
     }
 
     return {
-        selectParty
+        selectParty,
+        selectCandidate
     }
 })()
 
-fetchData(json => {
-    const data = processJson(restructureAndFilterJson(json))
+const TemporaryName = (function () {
+    let data, allEdits, minEdits, maxEdits, groups, chosenCandidates;
 
-    const selectionSection = document.querySelector('.selection-section')
-    const partyElements = createPartyElements(data);
-    for (let partyElement of partyElements)
-        selectionSection.appendChild(partyElement);
+    const createVisualisationWithVars = function (vars) {
+        createVisualisation(
+            minEdits,
+            maxEdits,
+            groups,
+            vars,
+            groups.flatMap(group => vars.map(variable => ({
+                group,
+                variable,
+                value: extractValue(chosenCandidates, group, variable)
+            }))),
+            vars.reduce((a, c) => Object.assign(a, {
+                [c]: {
+                    average: chosenCandidates.find(cand => cand.name === c).averageEdits,
+                    editData: chosenCandidates.find(cand => cand.name === c).editData.reduce((a, c) => Object.assign(a, { [c.date.month + '/' + c.date.year]: { edits: c.edits, url: c.editsUrl } }), {})
+                }
+            }), {})
+        )
+    }
 
-    const allEdits = data.flatMap(party => party.candidates.flatMap(candidate => candidate.editData.map(data => data.editsFromAverage)))
-    const minEdits = allEdits.reduce((a, c) => c < a ? c : a, Number.MAX_SAFE_INTEGER)
-    const maxEdits = allEdits.reduce((a, c) => c > a ? c : a, Number.MIN_SAFE_INTEGER)
-    const chosenCandidates = data.flatMap(party => party.candidates)
-    const groups = getDateGroups(comparingDates.start, comparingDates.end);//["10/2020", "11/2020", "12/2020", "1/2021", "2/2021", "3/2021", "4/2021", "5/2021", "6/2021", "7/2021", "8/2021", "9/2021"]
-    const vars = chosenCandidates.map(candidate => candidate.name)
-    createVisualisation(
-        minEdits,
-        maxEdits,
-        groups,
-        vars,
-        groups.flatMap(group => vars.map(variable => ({
-            group,
-            variable,
-            value: extractValue(chosenCandidates, group, variable)
-        })))
-    )
-})
+    fetchData(json => {
+        data = processJson(restructureAndFilterJson(json))
+
+        const selectionSection = document.querySelector('.selection-section')
+        const partyElements = createPartyElements(data);
+        for (let partyElement of partyElements)
+            selectionSection.appendChild(partyElement);
+
+        allEdits = data.flatMap(party => party.candidates.flatMap(candidate => candidate.editData.map(data => data.editsFromAverage)))
+        minEdits = allEdits.reduce((a, c) => c < a ? c : a, Number.MAX_SAFE_INTEGER)
+        maxEdits = allEdits.reduce((a, c) => c > a ? c : a, Number.MIN_SAFE_INTEGER)
+        chosenCandidates = data.flatMap(party => party.candidates)
+        groups = getDateGroups(comparingDates.start, comparingDates.end)
+        const vars = data.map(party => party.candidates[0].name).reverse()
+        createVisualisationWithVars(vars)
+        // createVisualisation(
+        //     minEdits,
+        //     maxEdits,
+        //     groups,
+        //     vars,
+        //     groups.flatMap(group => vars.map(variable => ({
+        //         group,
+        //         variable,
+        //         value: extractValue(chosenCandidates, group, variable)
+        //     })))
+        // )
+    })
+
+    return {
+        createVisualisationWithVars,
+    }
+})()
+

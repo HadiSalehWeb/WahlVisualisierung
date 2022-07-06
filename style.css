@@ -1,13 +1,10 @@
 body {
-    margin: 0
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 h1 {
     font-family: Georgia, 'Times New Roman', Times, serif;
-}
-
-p {
-    font-family: Arial, Helvetica, sans-serif;
 }
 
 .body-container {
@@ -37,37 +34,135 @@ p {
     border-radius: 10px;
     margin-bottom: 13px;
     padding: 15px;
-    display: inline-block;
+    float: left;
+    clear: left;
+    box-shadow: 0px 4px 19px 0px #b1b1b1;
 }
 
 .party-header {
-    position: relative;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    flex-wrap: nowrap;
+    align-content: center;
+    align-items: center;
+}
+
+.party-header .party-image {
+    width: 120px;
+    transition: width 0.2s ease-in-out;
+}
+
+.party-header .arrow {
+    width: 0;
+    height: 0;
+    border-top: 17px solid transparent;
+    border-bottom: 17px solid transparent;
+    border-left: 17px solid #e2e2e2;
+    margin-right: 10px;
+}
+
+.party.show .party-header .arrow {
+    display: none;
+}
+
+.party-candidates img {
+    width: 60px;
 }
 
 .party-candidates {
-    display: none;
+    display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr;
-    grid-row-gap: 14px;
-    margin-top: 10px;
+    grid-gap: 7px;
+    margin-top: 20px;
+    padding: 4px;
 }
 
 .party-candidates img {
     border-radius: 50%;
+    transition: width 0.2s ease-in-out, transform 0.2s ease-in-out;
 }
+/* 
+.party-candidates img.selected, .all-candidates-image.selected {
+    box-shadow: 0 0 2px 4px black;
+} */
 
-.party-header img:nth-child(3) {
+.party-header img.all-candidates-image {
     display: none;
-    position: relative;
-    bottom: 50%;
-    transform: translateY(-50%);
     margin-left: 10px;
     border-radius: 50%;
+    width: 60px;
 }
 
-.party.show .party-header img:nth-child(3) {
+.party.show .party-header img.all-candidates-image {
     display: inline;
 }
 
-.party.show .party-candidates {
-    display: grid;
+.party.show img.party-image {
+    width: 178px;
+}
+
+.party-candidates-container {
+    overflow: hidden;
+    max-height: 0;
+    max-width: 0;
+    transition: max-width 0.2s ease-in-out, max-height 0.2s ease-in-out;
+}
+
+.party.show .party-candidates-container {
+    max-height: 300px;
+    max-width: 300px;
+}
+
+.party.transition-finished .party-candidates-container {
+    overflow: unset;
+}
+
+.candidate-image-container {
+    position: relative;
+}
+
+.candidate-image-description-box {
+    position: absolute;
+    width: 407%;
+    height: 140%;
+    TOP: -16px;
+    left: -17px;
+    border-radius: 7px;
+    background-color: white;
+    z-index: -100;
+    box-shadow: 0px 4px 19px 0px #c3c3c3;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.candidate-image-container.hover .candidate-image-description-box {
+    z-index: 1;
+    opacity: 1;
+}
+
+.candidate-image-container.hover img {
+    z-index: 2;
+    width: 80px;
+    transform: translate(-15%, -15%);
+}
+
+.candidate-image-container.transition-finished img {
+    position: absolute;
+}
+
+.candidate-image-description-box > div {
+    position: absolute;
+    left: 106px;
+    top: 10px;
+    border: 10px;
+    display: block;
+    height: 82%;
+}
+
+.small-text {
+    position: absolute;
+    bottom: 4px;
+    left: 1px;
+    font-size: .7em;
 }
