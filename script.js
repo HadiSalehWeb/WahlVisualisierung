@@ -109,8 +109,8 @@ const processJson = function (json) {
                     edits: 0
                 }))).map(point => ({
                     date: point.date,
-                    edits: point.edits,
-                    editsFromAverage: point.edits - averageEdits,
+                    edits: point.edits / actualArray.length,
+                    editsFromAverage: point.edits / actualArray.length - averageEdits,
                 }))
             }
         })
@@ -234,7 +234,7 @@ const createVisualisation = function (min, max, groups, vars, data, additionalIn
     const heatmap = d3.select("#election-heatmap");
     heatmap.node().innerHTML = ''
 
-    const margin = { top: 30, right: 30, bottom: 30, left: 160 },
+    const margin = { top: 100, right: 30, bottom: 30, left: 160 },
         width = Math.floor(heatmap.node().parentElement.getBoundingClientRect().width) - margin.left - margin.right,
         height = vars.length * (width / groups.length);
 
@@ -324,6 +324,97 @@ const createVisualisation = function (min, max, groups, vars, data, additionalIn
         .on("mouseleave", mouseleave)
         .on("click", click)
 
+    const svg = d3.select("#election-heatmap svg")
+
+    // ! Creating the legend
+    var linearGradient = svg
+        .append("linearGradient")
+        .attr("id", "linear-gradient");
+
+    //Horizontal gradient
+    linearGradient
+        .attr("x1", "0%")
+        .attr("y1", "0%")
+        .attr("x2", "100%")
+        .attr("y2", "0%");
+
+    //Append multiple color stops by using D3's data/enter step
+    linearGradient
+        .selectAll("stop")
+        .data([
+            { offset: "0%", color: "#a0651a" },
+            { offset: "6.908%", color: "#eef1ea" },
+            { offset: "100%", color: "#187a72" },
+        ])
+        .enter()
+        .append("stop")
+        .attr("offset", function (d) {
+            return d.offset;
+        })
+        .attr("stop-color", function (d) {
+            return d.color;
+        });
+
+    var legendWidth = width * 0.5,
+        legendHeight = 8;
+    //Color Legend container
+    var legendsvg = svg
+        .insert("g", ':first-child')
+        .attr("id", "legend")
+        .attr(
+            "transform",
+            "translate(" + (width - margin.left + legendWidth / 2) + "," + (legendHeight * 2) + ")"
+        );
+    //Draw the Rectangle
+    legendsvg
+        .append("rect")
+        .attr("class", "legendRect")
+        .attr("x", -legendWidth / 2 + 0.5)
+        .attr("y", 10)
+        .attr("width", legendWidth)
+        .attr("height", legendHeight)
+        .style("fill", "url(#linear-gradient)")
+        .style("stroke", "black")
+        .style("stroke-width", "1px");//change this stroke it's ugly
+    //Append title
+    legendsvg
+        .append("text")
+        .attr("class", "legendTitle")
+        .attr("x", -legendWidth / 8)
+        .attr("y", 0)
+        .text("Editierungen");
+    //Set scale for x-axis
+    var xScale2 = d3
+        .scaleLinear()
+        .range([0, legendWidth])
+        .domain([min, max]);
+
+    legendsvg
+        .append("g")
+        .call(
+            d3
+                .axisBottom(xScale2)
+                .tickValues([
+                    min,
+                    0,
+                    max,
+                ])
+            // .tickFormat((x) => x.toFixed(2))
+        )
+        .attr("class", "legendAxis")
+        .attr("id", "legendAxis")
+        .attr(
+            "transform",
+            "translate(" + -legendWidth / 2 + "," + (10 + legendHeight) + ")"
+        );
+
+    heatmap
+        .append('div')
+        .join('text')
+        .text("Alle Schließen")
+        .attr("class", "close-all-button")
+        .on('click', stateManager.deselectAll)
+
     let rerenderTimeout = null;
 
     d3.select(window)
@@ -383,9 +474,16 @@ const stateManager = (function () {
         TemporaryName.createVisualisationWithVars(selectedCandidates.slice(0).reverse())
     }
 
+    const deselectAll = function () {
+        document.querySelectorAll('img.selected').forEach(img => { img.classList.remove('selected'); img.style.boxShadow = '' })
+        selectedCandidates.splice(0, selectedCandidates.length)
+        TemporaryName.createVisualisationWithVars(selectedCandidates.slice(0).reverse())
+    }
+
     return {
         selectParty,
-        selectCandidate
+        selectCandidate,
+        deselectAll
     }
 })()
 
