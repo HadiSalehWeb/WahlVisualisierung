@@ -290,7 +290,7 @@ const createVisualisation = function (min, max, groups, vars, data, additionalIn
     const mousemove = function (event, d) {
         const shouldBeLeft = event.x < document.body.clientWidth * .7
         tooltip
-            .html(`Kandidat Durchschnitt von 10.2017 bis 09.2020: <b>${roundToThreeDigits(additionalInfo[d.variable].average)}</b><br>Editierungen diesen Monat: <b>${roundToThreeDigits(additionalInfo[d.variable].editData[d.group].edits)}</b><br>Wert dieser Zelle (Differenz zwischen Editierungen und Durchschnitt): <b>${roundToThreeDigits(d.value)}</b>`)
+            .html(`Kandidat Durchschnitt von 10.2017 bis 09.2020: <b>${roundToThreeDigits(additionalInfo[d.variable].average)}</b><br>Editierungen diesen Monat: <b>${additionalInfo[d.variable].editData[d.group] ? roundToThreeDigits(additionalInfo[d.variable].editData[d.group].edits) : "Nicht verfügbar."}</b><br>Wert dieser Zelle (Differenz zwischen Editierungen und Durchschnitt): <b>${isNaN(d.value) ? "Nicht verfügbar." : roundToThreeDigits(d.value)}</b>`)
             .style(shouldBeLeft ? "left" : "right", (shouldBeLeft ? event.x + 10 : document.body.clientWidth - event.x + 10) + "px")
             .style(shouldBeLeft ? "right" : "left", "unset")
             .style("top", (event.layerY) + "px")
@@ -323,7 +323,7 @@ const createVisualisation = function (min, max, groups, vars, data, additionalIn
         .on("mousemove", mousemove)
         .on("mouseleave", mouseleave)
         .on("click", click)
-        
+
     let rerenderTimeout = null;
 
     d3.select(window)
